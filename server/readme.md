@@ -8,7 +8,7 @@
 
 
 
-Postgresql table schema :
+### Postgresql table schema 
 UserTable: 
 ```
                                     Table "public.userdata"
@@ -27,7 +27,7 @@ Indexes:
 
 ```
 
-Shops Table :
+### Shops Table :
 
 ```
                                     Table "public.shopdata"
@@ -46,7 +46,7 @@ Indexes:
 ```
 
 
-pre-requsite to run code: 
+### pre-requsite to run code: 
 - install latest version of Go and create $GOPATH in local
 - install postgresql in local <or> run postgresql as Docker container and get access credentials .
 - Set psql database credentails as env's ,
@@ -62,7 +62,7 @@ git clone https://github.com/bhaskarhc/full-stack-interview.git
 ```
 go run /server/main.go
 ```
------------ Server started with localhost as host and port 3000  ---------
+* ----------- Server started with localhost as host and port 3000  --------- *
 
 1. New user login by mobile number :
   ```
