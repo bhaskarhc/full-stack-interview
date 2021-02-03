@@ -171,7 +171,6 @@ api: "/token"
 }
 ```
 5. user can create single/multiple stores
-```
 
 ```
 api: "/shop/add" 
@@ -190,6 +189,7 @@ api: "/shop/add"
   successfully shopdata saved .. ! 
  {0 1   0 active ram pan shop  pan-shop}
  ```
+
 
 
 
