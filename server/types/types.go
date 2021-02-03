@@ -10,3 +10,18 @@ type User struct {
 	ShopType string `json:shopType`
 	OTP      int    `json:"otp"`
 }
+
+type Shop struct {
+	ID          int    `json:"id"`
+	AccountID   int    `json:"accountID"`
+	ItemGroupID string `json:"itemGroupID"`
+	Location    string `json:"location"`
+	Rating      int    `json:"rating"`
+	Status      string `json:"status"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+}
+type Shops struct {
+	Shops []Shop `json:"shops"`
+}

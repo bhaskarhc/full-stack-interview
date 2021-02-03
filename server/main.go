@@ -4,8 +4,10 @@ import (
 	"flag"
 	"net/http"
 	"serverInGo/database"
-	"serverInGo/handler"
+	"serverInGo/shops"
 	"serverInGo/user"
+
+	// _ "serverInGo/handler"
 
 	"github.com/golang/glog"
 	_ "github.com/lib/pq"
@@ -16,10 +18,10 @@ func main() {
 	flag.Lookup("logtostderr").Value.Set("true")
 	// Initailze Db connection
 	database.InitDb()
-	// user.GenerateToken("9666334149")
-	user.ValidateUser(999)
-
-	http.HandleFunc("/account", handler.CreateAccount)
+	http.HandleFunc("/token", user.GenToken)
+	http.HandleFunc("/user/new", user.NewUser)
+	http.HandleFunc("/shops", shops.UserShops)
+	http.HandleFunc("/shop/add", shops.AddShop)
 
 	glog.Infof("Listening on http://0.0.0.0:3000")
 

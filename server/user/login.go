@@ -1,8 +1,11 @@
 package user
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"serverInGo/database"
 	"serverInGo/types"
 	"time"
@@ -20,7 +23,7 @@ import (
 */
 // Create a struct that models the structure of a user, both in the request body, and in the DB
 type Credentials struct {
-	mobile int `json:"mobile"`
+	Mobile int `json:"mobile"`
 	OTP    int `json:"otp"`
 }
 
@@ -28,63 +31,98 @@ type token struct {
 	JWT        string `json:"jwt"`
 	ExpireTime string `json:"expireTime"`
 }
+type mobile struct {
+	Number int `json:"mobile"`
+}
 
-func NewUser() {
-	var number int
-	number = 909090
-	var user types.User
-	user.Mobile = number
-	user.OTP = createOTP(user.Mobile)
+func NewUser(w http.ResponseWriter, r *http.Request) {
 
-	err := saveUser(user)
+	r.ParseForm()
+	b, err := ioutil.ReadAll(r.Body)
+	// body := string(b)
 	if err != nil {
 		panic(err)
 	}
+
+	var userNumber mobile
+	err = json.Unmarshal(b, &userNumber)
+	if err != nil {
+		panic(err)
+	}
+	var user types.User
+	err = addUser(userNumber.Number)
+	if err != nil {
+		panic(err)
+	}
+	user.Mobile = userNumber.Number
+	user.OTP = createOTP(user)
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Successfully created user \n %v", user)
 }
-func saveUser(user types.User) error {
-	pipelineQuery := fmt.Sprintf("insert into userdata(mobile,otp) values($1,$2)")
-	_, err := database.Db.Query(pipelineQuery, user.Mobile, user.Token)
+func addUser(number int) error {
+	pipelineQuery := fmt.Sprintf("insert into userdata(mobile) values($1)")
+	_, err := database.Db.Query(pipelineQuery, number)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func ValidateUser(num int) {
+// func updateUser(user types.User) error {
+// 	pipelineQuery := fmt.Sprintf("UPDATE userdata SET ")
+// 	_, err := database.Db.Query(pipelineQuery, user.Mobile, user.Token)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
-	var cred Credentials
-	cred = Credentials{
-		OTP:    1234,
-		mobile: 9666334149,
-	}
-	// pipelineQuery := fmt.Sprintf("select otp from userdata where mobile=$1")
-	var counter int
-	database.Db.QueryRow("select otp from userdata where mobile=999").Scan(&counter)
-	fmt.Println("---------------------****** ", counter)
-	// _, err := database.Db.Query(pipelineQuery, cred.mobile)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	CreateToken(cred.mobile)
-
-	// createOTP(cred.mobile)
-	// validateOTP()
-	// random(1000, 2000)
-	fmt.Println("----------------------------", cred)
-
-}
 func random(min int, max int) int {
 	return rand.Intn(max-min) + min
 }
-func createOTP(otp int) int {
+func createOTP(u types.User) int {
 
-	pipelineQuery := fmt.Sprintf("UPDATE userdata SET token=$1 WHERE mobile=$2 RETURNING token")
-	row, err := database.Db.Query(pipelineQuery, otp, 999)
+	randomOTP := random(0000, 9999)
+	pipelineQuery := fmt.Sprintf("UPDATE userdata SET otp=$1 WHERE mobile=$2")
+	_, err := database.Db.Query(pipelineQuery, randomOTP, u.Mobile)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("row", row)
-	return otp
+	var genOTPfromDB int
+	queryForOTP := fmt.Sprintf("select otp from userdata where mobile=$1")
+	_ = database.Db.QueryRow(queryForOTP, u.Mobile).Scan(&genOTPfromDB)
+
+	fmt.Printf("---OTP_DB_", genOTPfromDB)
+	return randomOTP
+
+}
+
+func ValidateUser(c Credentials) (string, error) {
+	var cred Credentials
+	cred = Credentials{
+		OTP:    c.OTP,
+		Mobile: c.Mobile,
+	}
+	// pipelineQuery := fmt.Sprintf("select otp from userdata where mobile=$1")
+	var otp int
+	var token string
+	err := database.Db.QueryRow("select otp from userdata where mobile=$1", cred.Mobile).Scan(&otp)
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println("DBOTP : %d \n APIActual : %d", otp, cred.OTP)
+
+	if otp == cred.OTP {
+		token, err = CreateToken(cred.Mobile)
+		if err != nil {
+			panic(err)
+		}
+
+		// return token
+	}
+	fmt.Println("\n \t  Token :  ", token)
+	return token, nil
 
 }
 
@@ -100,12 +138,45 @@ func CreateToken(mobile int) (string, error) {
 	claims["client"] = mobile
 	claims["exp"] = time.Now().Add(time.Minute * 30).Unix()
 
-	tokenString, err := token.SignedString(mySigningKey)
+	tokenString, err := token.SignedString([]byte(fmt.Sprint(mobile)))
 
 	if err != nil {
 		fmt.Errorf("Something Went Wrong: %s", err.Error())
 		return "", err
 	}
+	_, err = database.Db.Query("update userdata set token=$1 where mobile=$2", tokenString, mobile)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(tokenString)
 	return tokenString, nil
+}
+
+func GenToken(w http.ResponseWriter, r *http.Request) {
+	// vars := mux.Vars(r)
+	// w.WriteHeader(http.StatusOK)
+	// fmt.Fprintf(w, "Category: %v\n", vars["category"])
+
+	r.ParseForm()
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	b, err := ioutil.ReadAll(r.Body)
+	// body := string(b)
+	if err != nil {
+		panic(err)
+	}
+	var cred Credentials
+	err = json.Unmarshal(b, &cred)
+	if err != nil {
+		panic(err)
+	}
+	var JWTToken token
+	JWTToken.JWT, err = ValidateUser(cred)
+	if err != nil {
+
+	}
+	fmt.Fprintf(w, " {token : %v}", cred)
+	fmt.Fprintf(w, " {token : %v}", JWTToken)
+
 }

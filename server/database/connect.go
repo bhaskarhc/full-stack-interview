@@ -46,20 +46,19 @@ func InitDb() {
 
 // createTable in database if not abvailable
 func createTable() {
-	userT := fmt.Sprintf("CREATE TABLE IF NOT EXISTS userdata (index SERIAL PRIMARY KEY,userid VARCHAR, mobile INT,token VARCHAR, name VARCHAR, location VARCHAR, shopType VARCHAR, otp int)")
+	userT := fmt.Sprintf("CREATE TABLE IF NOT EXISTS userdata (index SERIAL PRIMARY KEY,userid VARCHAR, mobile BIGINT,token VARCHAR, name VARCHAR, location VARCHAR, shopType VARCHAR, otp int)")
 	value, err := Db.Query(userT)
 	if err != nil {
 		glog.Error(err)
 	}
 	defer value.Close()
 	// create primary table
-	accountT := fmt.Sprintf("CREATE TABLE IF NOT EXISTS accounts (mobile VARCHAR PRIMARY KEY, token VARCHAR, name VARCHAR, location VARCHAR, shopType VARCHAR )")
+	accountT := fmt.Sprintf("CREATE TABLE IF NOT EXISTS shopdata(id SERIAL PRIMARY KEY,itemgroupid VARCHAR, name VARCHAR,rating VARCHAR,status VARCHAR,accountid INT, type VARCHAR, description VARCHAR)")
 	accountQuery, err := Db.Query(accountT)
 	if err != nil {
 		glog.Error(err)
 	}
 	defer accountQuery.Close()
-
 }
 
 // dbConfig get config from environment variable
